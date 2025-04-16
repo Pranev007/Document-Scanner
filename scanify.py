@@ -92,7 +92,7 @@ def main():
         # Display results
         st.markdown("### 📄 Scanned Results")
         for i, scanned_pil in enumerate(scanned_images):
-            st.image(scanned_pil, caption=f"Page {i + 1}", use_container_width=True)
+            st.image(scanned_pil, caption=f"Page {i + 1}", use_column_width=True)
 
         # Download as PDF
         st.markdown("---")
@@ -217,20 +217,44 @@ def auto_crop(img):
     return img[y:y + h, x:x + w]
 
 def process_image(img):
-    _, blurred, edges = preprocess_image(img)
+    st.markdown("#### Step 1: Preprocessing")
+    resized_img, blurred, edges = preprocess_image(img)
+    st.image(resized_img, caption="Resized Image", use_column_width=True)
+    st.image(blurred, caption="Blurred (Bilateral Filter + CLAHE)", use_column_width=True)
+    st.image(edges, caption="Edges (Canny Edge Detection)", use_column_width=True)
+
+    st.markdown("#### Step 2: Finding Document Contour")
     biggest = get_contours(edges)
+    contour_img = resized_img.copy()
     if biggest is not None:
+        cv2.drawContours(contour_img, [biggest.astype(int)], -1, (0, 255, 0), 3)
+        st.image(contour_img, caption="Detected Document Contour", use_column_width=True)
+
+        st.markdown("#### Step 3: Perspective Transformation")
         warped = warp_perspective(blurred, biggest)
+        st.image(warped, caption="Warped Document", use_column_width=True)
+
+        st.markdown("#### Step 4: Auto Cropping")
         cropped = auto_crop(warped)
+        st.image(cropped, caption="Auto Cropped", use_column_width=True)
+
+        st.markdown("#### Step 5: Enhancement")
         enhanced = enhance_document(cropped)
+        st.image(enhanced, caption="Enhanced Document", use_column_width=True)
     else:
+        st.warning("No document contour found. Attempting fallback auto-crop and enhancement.")
         cropped = auto_crop(img)
+        st.image(cropped, caption="Fallback Auto Cropped", use_column_width=True)
+
         enhanced = enhance_document(cropped)
+        st.image(enhanced, caption="Fallback Enhanced Document", use_column_width=True)
+
     return enhanced
+
+
 
 if __name__ == "__main__":
     main()
-
 
 
 
